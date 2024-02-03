@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thesis</title>
+  <link rel="stylesheet" href="index.css">  
+  <script>
+</script>
+</head>
+
+<body>
+
+  <div id="start-screen" class="start-screen">
+    <svg id="play-button" class="play-button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <polygon points="22,16 42,32 22,48" />
+    </svg>
+  </div>
+
+  <div id="timer-display" class="timer-display">00:00:00</div>
+
+  <div id="audio-player" class="player">
+    <audio id="audio" controls>
+      <source src="assets/Circles.mp3" type="audio/mpeg">
+    </audio>
+    <ul id="playlist" class="playlist">
+      <li><a href="assets/Circles.mp3"></a></li>
+      <li><a href="assets/Complicated.mp3"></a></li>
+      <li><a href="assets/BlueWorld.mp3"></a></li>
+      <li><a href="assets/GoodNews.mp3"></a></li>
+      <li><a href="assets/ICanSee.mp3"></a></li>
+      <li><a href="assets/Everybody.mp3"></a></li>
+    </ul>
+  </div>
+
+  <div class="main-content">
+    <div class="rings">
+
+      <img src="assets/Asset10.svg" class="ring1" alt="">
+      <img src="assets/Asset17.svg" class="ring2" alt="">
+      <img src="assets/Asset13.svg" class="ring3" alt="">
+      <img src="assets/Asset14.svg" class="ring4" alt="">
+      <img src="assets/Asset16.svg" class="ring5" alt="">
+
+    </div>
+  </div>
+
+  <script>
+    const audioPlayer = document.getElementById('audio');
+    const playlist = document.getElementById('playlist').getElementsByTagName('a');
+    const startScreen = document.getElementById('start-screen');
+    const playButton = document.getElementById('play-button');
+    let currentSongIndex = 0;
+  
+    function playAudio() {
+      audioPlayer.currentTime = 0;
+      audioPlayer.play();
+      document.removeEventListener('click', playAudio); 
+      startScreen.classList.add('hidden');
+  
+      document.querySelector('.ring1').classList.add('animate-ring1');
+      document.querySelector('.ring2').classList.add('animate-ring2');
+      document.querySelector('.ring3').classList.add('animate-ring3');
+      document.querySelector('.ring4').classList.add('animate-ring4');
+      document.querySelector('.ring5').classList.add('animate-ring5');
+    }
+
+    let startTime;
+    let elapsedTime = 0;
+    let intervalId = null;
+
+    function startTimer() {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
+      startTime = Date.now() - elapsedTime;
+      intervalId = setInterval(updateTimer, 1);
+    }
+
+    function updateTimer() {
+      elapsedTime = Date.now() - startTime;
+
+      let minutes = Math.floor((elapsedTime / (1000 * 60)) % 60);
+      let seconds = Math.floor((elapsedTime / 1000) % 60);
+      let milliseconds = Math.floor((elapsedTime % 1000) / 10);
+
+      const formattedMinutes = pad(minutes, 2);
+      const formattedSeconds = pad(seconds, 2);
+      const formattedMilliseconds = pad(milliseconds, 2);
+
+      const timerString = `${formattedMinutes}:${formattedSeconds}:${formattedMilliseconds}`;
+      document.getElementById('timer-display').textContent = timerString;
+    }
+
+    function pad(number, length) {
+      let str = number.toString();
+      while (str.length < length) {
+        str = '0' + str;
+      }
+      return str;
+    }
+
+    playButton.addEventListener('click', function() {
+      if (typeof playAudio === "function") {
+        playAudio();
+      }
+      startTimer();
+    });
+      
+        audioPlayer.addEventListener('ended', () => {
+          currentSongIndex++;
+          if (currentSongIndex >= playlist.length) {
+            currentSongIndex = 0;
+          }
+          audioPlayer.src = playlist[currentSongIndex].href;
+          audioPlayer.play();
+        });
+  </script>
+</body>
+</html>
