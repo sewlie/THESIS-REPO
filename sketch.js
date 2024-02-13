@@ -1,149 +1,121 @@
-
 let svgImages = [];
 let playlist = [];
 let currentSongIndex = 0;
 let isPlaying = false;
 let startTime, elapsedTime = 0, intervalId;
-let rotationAngles = [0, 0, 0, 0, 0];
-let rotationStartTimes = [0, 0, 0, 0, 0]; // Initialize with zeros
-let animationDurations = [170, 232, 209, 342, 220];
-
-var x = 1;
-
-
+let rotationAngles = [0, 0]; // Adjusting for simplicity
+let rotationStartTimes = [0, 0]; // Adjusting to initiate only first ring rotation initially
+let animationduration1s = [170, 232]; // Example duration1s for full rotations
+let x = 1; // Initial state to control the start of the interaction
+let buffer; // Declare an off-screen buffer for larger-than-canvas drawing
 
 function preload() {
-  svgImages.push(loadImage('assets/Asset10.svg'));
-  svgImages.push(loadImage('assets/Asset17.svg'));
-  // Add other SVGs as needed...
-
-  playlist.push(loadSound('assets/Circles.mp3'));
-  playlist.push(loadSound('assets/Complicated.mp3'));
-  // Add other tracks to the playlist... 
+  svgImages.push(loadImage("assets/Asset10.svg"));
+  svgImages.push(loadImage("assets/Asset17.svg"));
+  playlist.push(loadSound("assets/Circles.mp3"));
+  playlist.push(loadSound("assets/Complicated.mp3"));
 }
 
 function setup() {
-  createCanvas(2000, 2000);
-  background(255);
-  setupAudioPlayer(playlist[0]);
+    pixelDensity(2); // Be mindful of performance implications
+    createCanvas(1000, 1000);
+    buffer = createGraphics(2000, 2000, P2D); // Specify P2D renderer if not already
+    background(255);
+    setupAudioPlayer(playlist[0]);
 }
-
-var x = 1; // Initial state
 
 function draw() {
   background(255);
+  buffer.clear();
 
-  let currentTime = millis() / 1000;
+  let currentTime1 = millis() / 1000;
+  buffer.push();
+  // The translation within the buffer doesn't need to change for this adjustment
+  buffer.translate(1000 - 250, 1000 + 200);
 
-  // Always draw the rings first
   for (let i = 0; i < svgImages.length; i++) {
-      push(); // Isolate transformations for each ring
-      translate(width / 2, height / 2); // Move to the center of the canvas
+    if (x > 1 && ((i == 0 || (i == 1 && currentTime1 - rotationStartTimes[0] > 170)))) {
+      let elapsedTime = currentTime1 - rotationStartTimes[i];
+      let duration1 = animationduration1s[i];
+      let rotationProgress = elapsedTime / duration1;
+      let targetAngle = rotationProgress * TWO_PI;
+      // Reverse the direction by negating the targetAngle
+      rotationAngles[i] = min(targetAngle, TWO_PI) * -1; // Multiply by -1 to reverse direction
+    }
 
-      // Apply rotation based on the current time and user interaction
-      if (x > 1) {
-          let elapsedTime = currentTime - rotationStartTimes[i];
-          let smoothStartTime = 2; // Adjust for smoother start duration
-          // Only start calculating rotation after the initial click
-          if (currentTime >= rotationStartTimes[i] && elapsedTime <= smoothStartTime) {
-              let smoothProgress = elapsedTime / smoothStartTime;
-              rotationAngles[i] = TWO_PI * smoothProgress * (animationDurations[i] / 360); // Adjusted for smooth start
-          } else if (currentTime > rotationStartTimes[i] + smoothStartTime) {
-              // Full rotation based on duration after smooth start period
-              if (currentTime <= animationStartTimes[i] + animationDurations[i]) {
-                  let progress = (currentTime - (rotationStartTimes[i] + smoothStartTime)) / animationDurations[i];
-                  rotationAngles[i] = TWO_PI * progress;
-              }
-          }
-          rotate(rotationAngles[i]);
-      }
-
-      // Draw the SVG centered on the canvas
-      image(svgImages[i], -1000, -1000, 2000, 2000);
-      pop(); // End of isolation
+    buffer.push(); // Isolate the rotation for each SVG
+    buffer.rotate(rotationAngles[i]);
+    buffer.image(svgImages[i], -1000, -1000, 2000, 2000); // Drawing SVG centered
+    buffer.pop();
   }
 
-  // Overlay and play button logic, displayed only at the start
+  buffer.pop();
+  // Adjust the drawing position of the buffer on the canvas to move it 200 pixels left
+  // Previously, it was -1000 for x position, now it's -1200 to move 200 pixels to the left
+  image(buffer, -1000, -300, 2000, 2000, 0, 0, width, height);
+
   if (x == 1) {
-      fill(0, 0, 0, 51); // Semi-transparent overlay
-      rect(-width / 2, -height / 2, width, height);
-      fill(255);
-      textSize(64);
-      text('▶', 0, 0); // Draw play button at the center
+    fill(0, 0, 0, 51); // Semi-transparent overlay
+    // Adjust overlay position to match the new scene position
+    rect(-1200, 200, width, height);
+    fill(255);
+    textSize(64);
+    textAlign(CENTER, CENTER);
+    // Adjust play button's position to match the new scene position
+    text("▶", width / 2 - 1200, height / 2 + 200);
   }
 
-  // Display timer if audio is playing
   if (isPlaying) {
-      displayTimer();
+    displayTimer();
   }
 }
-
 
 function mousePressed() {
   if (x == 1) {
-      playAudio();
-      x = 2;
-      let currentTime = millis() / 1000;
-      for (let i = 0; i < rotationStartTimes.length; i++) {
-          rotationStartTimes[i] = currentTime; // Record start time for rotation
-      }
+    playAudio();
+    x = 2; // Changing state to prevent restarting the rotations
+    let currentTime1 = millis() / 1000;
+    rotationStartTimes.fill(currentTime1); // Initiate rotation for the first ring
   } else if (!isPlaying) {
-      playAudio();
-  } else {
-      pauseAudio();
+    playAudio();
   }
 }
 
-
-
-
 function setupAudioPlayer(audio) {
   audioPlayer = audio;
-  audioPlayer.onended(playNextSong);
+  audioPlayer.onended(() => {
+    playNextSong();
+  });
 }
 
 function playAudio() {
-  if (playlist[currentSongIndex].isPlaying()) {
-    playlist[currentSongIndex].pause();
-  } else {
+  if (!playlist[currentSongIndex].isPlaying()) {
     playlist[currentSongIndex].play();
     isPlaying = true;
     startTimer();
   }
 }
 
-function pauseAudio() {
-  playlist[currentSongIndex].pause();
-  isPlaying = false;
-}
-
 function playNextSong() {
-  currentSongIndex++;
-  if (currentSongIndex >= playlist.length) {
-    currentSongIndex = 0;
-  }
+  currentSongIndex = (currentSongIndex + 1) % playlist.length;
   setupAudioPlayer(playlist[currentSongIndex]);
   playAudio();
 }
 
 function startTimer() {
-  if (intervalId !== null) {
-    clearInterval(intervalId);
-  }
+  if (intervalId) clearInterval(intervalId);
   startTime = millis();
   intervalId = setInterval(() => {
     elapsedTime = millis() - startTime;
-    // Optional: Update timer display logic here
   }, 100);
 }
 
 function displayTimer() {
   let seconds = Math.floor(elapsedTime / 1000) % 60;
   let minutes = Math.floor(elapsedTime / (1000 * 60)) % 60;
-  let hours = Math.floor(elapsedTime / (1000 * 60 * 60)) % 24;
-
-  let timerString = nf(hours, 2) + ':' + nf(minutes, 2) + ':' + nf(seconds, 2);
+  let hours = Math.floor(elapsedTime / (1000 * 60 * 60));
+  let timerString = nf(hours, 2) + ":" + nf(minutes, 2) + ":" + nf(seconds, 2);
   fill(0);
   textSize(32);
-  text(timerString, 50, 50);
+  text(timerString, 500, 50); // Display timer text position adjusted for visibility
 }
