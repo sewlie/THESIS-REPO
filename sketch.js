@@ -18,8 +18,8 @@ function preload() {
 
 function setup() {
     pixelDensity(2); // Be mindful of performance implications
-    createCanvas(1000, 1000);
-    buffer = createGraphics(2000, 2000, P2D); // Specify P2D renderer if not already
+    createCanvas(2000, 2000);
+    buffer = createGraphics(4000, 4000, P2D); // Specify P2D renderer if not already
     background(255);
     setupAudioPlayer(playlist[0]);
 }
@@ -31,7 +31,7 @@ function draw() {
   let currentTime1 = millis() / 1000;
   buffer.push();
   // The translation within the buffer doesn't need to change for this adjustment
-  buffer.translate(1000 - 250, 1000 + 200);
+  buffer.translate(2000 - 500, 2000 + 400);
 
   for (let i = 0; i < svgImages.length; i++) {
     if (x > 1 && ((i == 0 || (i == 1 && currentTime1 - rotationStartTimes[0] > 170)))) {
@@ -45,24 +45,24 @@ function draw() {
 
     buffer.push(); // Isolate the rotation for each SVG
     buffer.rotate(rotationAngles[i]);
-    buffer.image(svgImages[i], -1000, -1000, 2000, 2000); // Drawing SVG centered
+    buffer.image(svgImages[i], -2000, -2000, 4000, 4000); // Drawing SVG centered
     buffer.pop();
   }
 
   buffer.pop();
   // Adjust the drawing position of the buffer on the canvas to move it 200 pixels left
   // Previously, it was -1000 for x position, now it's -1200 to move 200 pixels to the left
-  image(buffer, -1000, -300, 2000, 2000, 0, 0, width, height);
+  image(buffer, -2000, -600, 4000, 4000, 0, 0, width, height);
 
   if (x == 1) {
     fill(0, 0, 0, 51); // Semi-transparent overlay
     // Adjust overlay position to match the new scene position
-    rect(-1200, 200, width, height);
+    rect(-2400, 400, width, height);
     fill(255);
     textSize(64);
     textAlign(CENTER, CENTER);
     // Adjust play button's position to match the new scene position
-    text("▶", width / 2 - 1200, height / 2 + 200);
+    text("▶", width / 2 - 2400, height / 2 + 400);
   }
 
   if (isPlaying) {
