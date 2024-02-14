@@ -7,9 +7,10 @@ body {
 }
 
 .p5Canvas {
-  width: 1500px;
-  height: 1500px;
   overflow: hidden;
-  position: absolute;
-  margin-top: -200px;
+  margin-top: -500px;
+}
+
+.main {
+  display: flex;
 }

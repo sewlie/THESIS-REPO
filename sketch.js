@@ -3,17 +3,27 @@ let playlist = [];
 let currentSongIndex = 0;
 let isPlaying = false;
 let startTime, elapsedTime = 0, intervalId;
-let rotationAngles = [0, 0]; // Adjusting for simplicity
-let rotationStartTimes = [0, 0]; // Adjusting to initiate only first ring rotation initially
-let animationduration1s = [170, 232]; // Example duration1s for full rotations
-let x = 1; // Initial state to control the start of the interaction
-let buffer; // Declare an off-screen buffer for larger-than-canvas drawing
+let rotationAngles = [0, 0, 0, 0, 0];
+let rotationStartTimes = [0, 0, 0, 0, 0];
+let animationDurations = [170, 402, 611, 953, 1273];
+let x = 1; // Use this to control the state
+let fade = false; // New variable to control the fade effect
+let overlayOpacity = 255; // Start fully opaque
+let buffer;
 
 function preload() {
-  svgImages.push(loadImage("assets/Asset10.svg"));
-  svgImages.push(loadImage("assets/Asset17.svg"));
+  svgImages.push(loadImage("assets/Circles.svg"));
+  svgImages.push(loadImage("assets/Complicated.svg"));
+  svgImages.push(loadImage("assets/BlueWorld.svg"));
+  svgImages.push(loadImage("assets/GoodNews.svg"));
+  svgImages.push(loadImage("assets/ICanSee.svg"));
+
   playlist.push(loadSound("assets/Circles.mp3"));
   playlist.push(loadSound("assets/Complicated.mp3"));
+  playlist.push(loadSound("assets/BlueWorld.mp3"));
+  playlist.push(loadSound("assets/GoodNews.mp3"));
+  playlist.push(loadSound("assets/ICanSee.mp3"));
+  playlist.push(loadSound("assets/Everybody.mp3"));
 }
 
 function setup() {
@@ -27,42 +37,49 @@ function setup() {
 function draw() {
   background(255);
   buffer.clear();
-
   let currentTime1 = millis() / 1000;
   buffer.push();
-  // The translation within the buffer doesn't need to change for this adjustment
-  buffer.translate(2000 - 500, 2000 + 400);
+  buffer.translate(2000 - 500, 2000 + 400); // Adjust as needed
 
   for (let i = 0; i < svgImages.length; i++) {
-    if (x > 1 && ((i == 0 || (i == 1 && currentTime1 - rotationStartTimes[0] > 170)))) {
-      let elapsedTime = currentTime1 - rotationStartTimes[i];
-      let duration1 = animationduration1s[i];
-      let rotationProgress = elapsedTime / duration1;
-      let targetAngle = rotationProgress * TWO_PI;
-      // Reverse the direction by negating the targetAngle
-      rotationAngles[i] = min(targetAngle, TWO_PI) * -1; // Multiply by -1 to reverse direction
-    }
-
     buffer.push(); // Isolate the rotation for each SVG
+    // Determine if the current SVG should be rotating
+    if (x > 1) {
+      // Calculate elapsed time since the start of the corresponding song's rotation
+      let elapsedTime = currentTime1 - rotationStartTimes[i];
+      // Check if the elapsed time has passed the start time for this ring
+      if (elapsedTime > 0) {
+        // Calculate rotation progress
+        let rotationProgress = elapsedTime / animationDurations[i];
+        // Calculate the target angle, ensuring it does not exceed TWO_PI
+        let targetAngle = rotationProgress * TWO_PI;
+        // Reverse the direction by negating the target angle and ensure it stops at 360 degrees
+        rotationAngles[i] = (-targetAngle) % TWO_PI;
+      }
+    }
+    // Apply the calculated rotation
     buffer.rotate(rotationAngles[i]);
-    buffer.image(svgImages[i], -2000, -2000, 4000, 4000); // Drawing SVG centered
+    // Center the image at the rotation point and draw
+    buffer.image(svgImages[i], -2000, -2000, 4000, 4000);
     buffer.pop();
   }
 
   buffer.pop();
-  // Adjust the drawing position of the buffer on the canvas to move it 200 pixels left
-  // Previously, it was -1000 for x position, now it's -1200 to move 200 pixels to the left
   image(buffer, -2000, -600, 4000, 4000, 0, 0, width, height);
 
+  // Overlay and play button logic
+  if (x == 1 && fade) {
+    overlayOpacity -= 1; // Decrease the opacity more significantly per frame
+    overlayOpacity = max(overlayOpacity, 0); // Ensure it does not go below 0
+  }
+  
   if (x == 1) {
-    fill(0, 0, 0, 51); // Semi-transparent overlay
-    // Adjust overlay position to match the new scene position
-    rect(-2400, 400, width, height);
-    fill(255);
+    fill(0, 0, 0, 100); // Use the updated opacity for overlay
+    rect(0, 0, width, height);
+    fill(20, overlayOpacity); // Use the same updated opacity for the play button text
     textSize(64);
     textAlign(CENTER, CENTER);
-    // Adjust play button's position to match the new scene position
-    text("▶", width / 2 - 2400, height / 2 + 400);
+    text("▶", width / 2, height / 2);
   }
 
   if (isPlaying) {
@@ -73,13 +90,14 @@ function draw() {
 function mousePressed() {
   if (x == 1) {
     playAudio();
-    x = 2; // Changing state to prevent restarting the rotations
-    let currentTime1 = millis() / 1000;
-    rotationStartTimes.fill(currentTime1); // Initiate rotation for the first ring
+    fade = true; // Start fading
+    x = 2; // Change state to prevent restarting the rotations
+    rotationStartTimes.fill(millis() / 1000); // Initiate rotation for the first ring
   } else if (!isPlaying) {
     playAudio();
   }
 }
+
 
 function setupAudioPlayer(audio) {
   audioPlayer = audio;
