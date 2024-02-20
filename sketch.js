@@ -5,9 +5,9 @@ let isPlaying = false;
 let startTime, elapsedTime = 0, intervalId;
 let rotationAngles = [0, 0, 0, 0, 0];
 let rotationStartTimes = [0, 0, 0, 0, 0];
-let animationDurations = [170, 402, 611, 953, 1273];
-let x = 1; // Use this to control the state
-let fade = false; // New variable to control the fade effect
+let animationDurations = [5, 10, 15, 953, 1273]; // Corrected: Durations are in seconds
+let x = 1; // Control state
+let fade = false; // Control fade effect
 let overlayOpacity = 100; // Start fully opaque
 let buffer;
 
@@ -27,44 +27,66 @@ function preload() {
 }
 
 function setup() {
-    pixelDensity(2); // Be mindful of performance implications
-    createCanvas(2000, 2000);
-    buffer = createGraphics(4000, 4000, P2D); // Specify P2D renderer if not already
-    background(255);
-    setupAudioPlayer(playlist[0]);
+  pixelDensity(2);
+  createCanvas(2000, 2000);
+  buffer = createGraphics(4000, 4000, P2D);
+  background(255);
+  setupAudioPlayer(playlist[0]);
 }
+
+function calculateRotationAngle(currentTime, startTime, duration) {
+  const elapsedTime = currentTime - startTime;
+  const phaseThreshold = duration * 0.22; // 20% of the total duration for the slow phase
+  let rotationProgress;
+
+  if (elapsedTime < phaseThreshold) {
+      // Slow phase: Use a smaller portion of the rotation
+      const slowPhaseProgress = elapsedTime / phaseThreshold;
+      // Example of easing in: quadratic easing for smoother start
+      rotationProgress = (slowPhaseProgress * slowPhaseProgress) * (TWO_PI * -0.01);
+  } else {
+      // Fast phase: Complete the rest of the rotation
+      const fastPhaseDuration = duration - phaseThreshold;
+      const fastPhaseElapsedTime = elapsedTime - phaseThreshold;
+      // Linear progress for simplicity, adjust as needed for different easing
+      const fastPhaseProgress = fastPhaseElapsedTime / fastPhaseDuration;
+      // Ensure the rotation completes the remaining 80% of the full circle
+      rotationProgress = (TWO_PI * -0.01) + (fastPhaseProgress * (TWO_PI * -0.99));
+  }
+
+  return rotationProgress;
+}
+
 
 function draw() {
   background(255);
   buffer.clear();
   let currentTime = millis() / 1000;
   buffer.push();
-  buffer.translate(2000 - 500, 2000 + 400); // Adjust as needed
+  buffer.translate(2000 - 500, 2000 + 400);
 
   for (let i = 0; i < svgImages.length; i++) {
-    buffer.push(); // Isolate the rotation for each SVG
-    // Check if it's time for this ring to start rotating based on the playlist sequence
-    if (x > 1) {
-      let timeSinceStart = currentTime - rotationStartTimes[i];
-      // Only start rotating if the current time is past the start time for this ring
-      if (timeSinceStart >= 0) {
-        let rotationProgress = (timeSinceStart % animationDurations[i]) / animationDurations[i];
-        rotationAngles[i] = rotationProgress * TWO_PI * -1;
-        // Ensure the rotation only starts after its respective song starts playing
-        if (i > currentSongIndex) rotationAngles[i] = 0; // This ensures the next ring doesn't start early
+      buffer.push();
+      if (x > 1) {
+          // Calculate rotation angle with the custom function
+          if (currentTime >= rotationStartTimes[i] && currentTime <= rotationStartTimes[i] + animationDurations[i]) {
+              rotationAngles[i] = calculateRotationAngle(currentTime, rotationStartTimes[i], animationDurations[i]);
+          } else if (currentTime > rotationStartTimes[i] + animationDurations[i]) {
+              // Ensure the rotation does not revert after completing
+              rotationAngles[i] = -TWO_PI; // Adjust if your direction or completion state differs
+          }
       }
-    }
-    buffer.rotate(rotationAngles[i]);
-    buffer.image(svgImages[i], -2000, -2000, 4000, 4000);
-    buffer.pop();
+      buffer.rotate(rotationAngles[i]);
+      buffer.image(svgImages[i], -2000, -2000, 4000, 4000);
+      buffer.pop();
   }
 
   buffer.pop();
   image(buffer, -2000, -600, 4000, 4000, 0, 0, width, height);
 
-  // Overlay and play button logic, including fade effect
+  // Implementing the overlay and play button logic with fade effect
   if (x == 1 && fade) {
-    overlayOpacity -= 5; // Faster fade effect
+    overlayOpacity -= 5; // Adjust for a faster fade effect
     overlayOpacity = max(overlayOpacity, 0); // Prevent negative opacity
   }
 
@@ -82,26 +104,27 @@ function draw() {
   }
 }
 
+
+
 function mousePressed() {
   if (x == 1) {
     playAudio();
     fade = true; // Initiate fading
-    x = 2; // Change state to prevent restarting the rotations
-    let currentTime = millis() / 1000;
-    // Calculate and set start times for each ring based on the end of the previous song
-    rotationStartTimes[0] = currentTime; // First ring starts immediately
+    x = 2; // Change state
+    let currentTime = millis() / 1000; // Current time in seconds
+    // Set the initial start time for the first ring
+    rotationStartTimes[0] = currentTime;
+    // Calculate and set start times for each ring based on the actual durations
     for (let i = 1; i < rotationStartTimes.length; i++) {
-      rotationStartTimes[i] = rotationStartTimes[i - 1] + animationDurations[i - 1];
+      rotationStartTimes[i] = rotationStartTimes[i - 1] + animationDurations[i - 1]; // No conversion needed, already in seconds
     }
   } else if (!isPlaying) {
     playAudio();
   }
 }
 
-
 function setupAudioPlayer(audio) {
-  audioPlayer = audio;
-  audioPlayer.onended(() => {
+  audio.onended(() => {
     playNextSong();
   });
 }
@@ -116,8 +139,10 @@ function playAudio() {
 
 function playNextSong() {
   currentSongIndex = (currentSongIndex + 1) % playlist.length;
-  setupAudioPlayer(playlist[currentSongIndex]);
-  playAudio();
+  if (currentSongIndex < playlist.length) {
+    setupAudioPlayer(playlist[currentSongIndex]);
+    playAudio();
+  }
 }
 
 function startTimer() {
@@ -135,5 +160,5 @@ function displayTimer() {
   let timerString = nf(hours, 2) + ":" + nf(minutes, 2) + ":" + nf(seconds, 2);
   fill(0);
   textSize(32);
-  text(timerString, 0, 200); // Display timer text position adjusted for visibility
+  text(timerString, width / 2, height / 2 + 200);
 }
